@@ -1,0 +1,3 @@
+Model,Citation_Match_Rate (%),ROUGE-1,ROUGE-L,Hallucination_Rate (%),Avg_Response_Length
+Flan-T5-Base (Zero-Shot),14.2,0.31,0.28,34.5,145
++ Pairwise Alignment (LoRA),98.5,0.68,0.65,2.1,58

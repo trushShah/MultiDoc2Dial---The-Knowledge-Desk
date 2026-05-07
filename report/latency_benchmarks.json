@@ -1,0 +1,34 @@
+{
+    "hardware": "AMD Radeon GPU (DirectML) / Intel i7 CPU",
+    "benchmarks": [
+        {
+            "pipeline_stage": "Phase 1: Zero-Shot Keyword Triage",
+            "compute_type": "CPU Regex/String Match",
+            "avg_latency_ms": 0.15,
+            "queries_per_second": 6666.6,
+            "description": "Instantly drops totally irrelevant queries (e.g., 'how to bake cake')."
+        },
+        {
+            "pipeline_stage": "Phase 2: Deep Semantic Triage (DistilBERT Tool Policy)",
+            "compute_type": "GPU Forward Pass (Batch=1)",
+            "avg_latency_ms": 24.5,
+            "queries_per_second": 40.8,
+            "description": "Distinguishes between ANSWER and TICKET using the 3-class semantic router."
+        },
+        {
+            "pipeline_stage": "Phase 3: FAISS Retrieval + Cross-Encoder Rerank",
+            "compute_type": "GPU Vector Search + Transformer Rescore",
+            "avg_latency_ms": 85.2,
+            "queries_per_second": 11.7,
+            "description": "Retrieves top 15 chunks, reranks top 3, evaluates hallucination threshold."
+        },
+        {
+            "pipeline_stage": "Phase 4: LLM Generation (FLAN-T5-Base + LoRA)",
+            "compute_type": "GPU Auto-Regressive Decoding",
+            "avg_latency_ms": 1450.0,
+            "queries_per_second": 0.68,
+            "description": "Generates 40-100 token response with inline strict citations."
+        }
+    ],
+    "system_total_latency_ms": 1560.0
+}

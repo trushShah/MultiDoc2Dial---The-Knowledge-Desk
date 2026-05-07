@@ -1,0 +1,22 @@
+==================================================
+   TRAINING TOOL POLICY CLASSIFIER (3-Class & Custom Losses)
+==================================================
+[*] Detected device: privateuseone:0
+
+[*] Generating classification datasets... (This may take a minute for the full corpus)
+    Train: 70197 samples
+    Validation: 13488 samples
+    Test: 13113 samples
+
+[*] Starting explicit training loop...
+Epoch 1/1 [Training]: 100%|██████████████████| 8775/8775 [2:08:25<00:00, 1.14it/s, Loss=0.4741]
+Epoch 1 [Validation]: 100%|██████████████████| 843/843 [02:06<00:00, 6.69it/s] 
+  [Epoch 1 Summary] Train Loss: 0.4981 | Validation Loss: 0.4753 | Val Acc: 0.9990 | Val TBP: 0.9990
+
+--------------------------------------------------
+  FINAL EVALUATION ON TEST SET (multidoc2dial_dial_test.json)
+Testing: 100%|███████████████████████████████| 820/820 [02:03<00:00, 6.64it/s] 
+
+  Test Loss: 0.4771 | Test Accuracy: 0.9976 | Test TBP: 0.9976
+--------------------------------------------------
+ Success! 3-Class Tool Policy Model saved to 'tuned_tool_policy'.

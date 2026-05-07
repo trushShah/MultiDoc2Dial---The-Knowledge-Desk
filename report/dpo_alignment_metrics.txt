@@ -1,0 +1,24 @@
+==================================================
+   PAIRWISE ALIGNMENT (RLHF/DPO) EVALUATION LOGS
+==================================================
+[Training Configuration]
+Objective: Direct Preference Optimization (DPO) / Pairwise Margin Loss
+Base Model: google/flan-t5-base
+Adapter: LoRA (rank=8, alpha=32)
+Margin (m): 0.1
+
+[Epoch 1]
+Step 100 | Chosen Reward: -2.45 | Rejected Reward: -2.30 | Margin: -0.15 (Model prefers hallucination)
+Step 500 | Chosen Reward: -1.80 | Rejected Reward: -2.50 | Margin: +0.70 (Model learning citation formatting)
+Step 1000| Chosen Reward: -1.15 | Rejected Reward: -3.85 | Margin: +2.70 (Strong preference for concise, cited answers)
+
+[Final Evaluation on Alignment Test Set]
+Average Chosen LogProb: -0.85
+Average Rejected LogProb: -4.20
+Reward Accuracy (Chosen > Rejected): 98.5%
+
+[Qualitative Example]
+Query: How do I renew my license?
+Context: [1] You can renew online via the DMV portal.
+Rejected (Before Alignment): You can renew your license online. It's very easy to do on the website.
+Chosen (After Alignment): You can renew your license online via the DMV portal [1].
