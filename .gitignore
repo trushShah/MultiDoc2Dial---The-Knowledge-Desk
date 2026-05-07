@@ -1,0 +1,28 @@
+# Ignore dataset files
+*.json
+*.jsonl
+*.csv
+*.npy
+
+# Ignore vector databases
+*.index
+*.faiss
+
+# Ignore large model weights and directories
+codebase/data/
+codebase/models/
+*.bin
+*.pt
+*.safetensors
+
+# Ignore cache
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Ignore env
+.env
+.venv
+env/
+venv/

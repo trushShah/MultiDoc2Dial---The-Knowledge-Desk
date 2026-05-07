@@ -1,0 +1,156 @@
+% -------------------------------------------------------------
+% MULTI-DOC-2-DIAL FINAL REPORT: ACL FORMATTING
+% -------------------------------------------------------------
+
+\documentclass[11pt]{article}
+\usepackage{ACL2026}
+\usepackage{times}
+\usepackage{latexsym}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{inconsolata}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\title{Building a Preference-Aligned Customer Support Copilot with Agentic Tool Policies and Explicit Grounding}
+
+\author{Your Name \\
+  Author Institute \\
+  \texttt{email@domain.com} \\}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+As Large Language Models (LLMs) are increasingly deployed into customer-support environments, restricting their generative spaces to factual domains remains a significant challenge. This report details the architecture and training of an agentic support copilot leveraging the MultiDoc2Dial dataset. We implement a multi-stage Retrieve-Rerank-Generate pipeline augmented by a custom binary tool-calling neural policy, significantly mitigating Out-Of-Domain (OOD) hallucinations. By formulating a Pairwise Preference Ranking Margin Loss, we instill a strict citation-first generation rubric via Parameter-Efficient Fine-Tuning (PEFT), specifically Low-Rank Adaptation (LoRA), enforcing exact document and chunk-level metadata. Furthermore, we introduce a novel evaluation metric tailored for support workflows, \textit{Escalation Accuracy}, measuring the system's ability to defensively transition unanswerable queries to a human-ticket state. Empirical results highlight substantial improvements over inference-only retrieval baselines regarding semantic grounding and tool-routing precision.
+\end{abstract}
+
+\section{Introduction}
+Customer-serving chatbots regularly face Out-Of-Domain (OOD) knowledge queries that trigger models to confidently fabricate responses. To engineer a bounded, highly reliable Customer Support Copilot, this project constructs a modular, deep-learning pipeline relying on the MultiDoc2Dial corpus. 
+
+Rather than treating the generator as an isolated monolithic Question Answering (QA) machine, we construct an agentic configuration containing modular specialized components. We explicitly fine-tune three distinct structures within our optimized pipeline:
+\begin{enumerate}
+    \item A Dense Vector \textbf{Retriever} (\textit{all-MiniLM-L6-v2}).
+    \item A Custom Binary \textbf{Tool-Policy Classifier} (\textit{distilbert-base-uncased}).
+    \item A \textbf{Generator} (\textit{flan-t5-base}) adapted using Parameter-Efficient Fine-Tuning (PEFT) and aligned via Pairwise Preference tuning.
+\end{enumerate}
+
+This report maps the methodology of these distinct components, the custom mathematical loss formulations utilized to train them, our novel agentic tool schema, and the benchmark logic deployed for rigorous evaluation.
+
+\section{Related Works}
+Our architecture draws upon diverse methodologies targeting Large Language Model (LLM) hallucination and Retrieval-Augmented Generation (RAG) efficiency:
+\begin{itemize}
+    \item \textbf{ReAct \& Toolformers:} Interleaving reasoning and actions ensures models establish grounded steps rather than relying entirely on parameterized memory. We adapt this via our discrete Tool Policy schema.
+    \item \textbf{Direct Preference Optimization (DPO):} We implement a custom Pairwise Preference objective to enforce a citation-first style, mimicking Direct Preference Optimization (DPO) streamlined reward modeling without unstable Reinforcement Learning from Human Feedback (RLHF) loops.
+    \item \textbf{Parameter-Efficient Fine-Tuning (PEFT):} Because tuning large encoder-decoders is computationally heavy, we apply Low-Rank Adapters to align our T5 backend without exploding memory consumption.
+\end{itemize}
+
+\section{Methodology \& Deep Learning Architecture}
+Our backend diverges from monolithic zero-shot prompts by functionally segregating the inference task across a three-step workflow.
+
+\subsection{Novel Agentic Tool Schema}
+We introduce a custom structural schema defining two strict operational boundaries: \texttt{SearchKB} and \texttt{CreateTicket}.
+Before engaging expensive Facebook AI Similarity Search (FAISS) based document retrieval, user queries are intercepted by our Neural Tool Policy. If the sequence classifier identifies an off-topic query, the generative process is halted. The system dynamically emits a JavaScript Object Notation (JSON) structured command:
+\texttt{\{"tool": "CreateTicket", "parameters": \{"summary": query, "category": "out\_of\_domain"\}\}}. 
+This unique deterministic approach physically prevents base-model hallucinations by denying the generator context for unsupported domains.
+
+\subsection{Dense Retrieval and Cross-Encoding}
+In-domain queries trigger the \texttt{SearchKB} tool. We perform static ahead-of-time embedding compilation using our fine-tuned Retriever, persistently caching dense vectors to \texttt{.npy} arrays. The dataset processing resulted in the distribution outlined in Table \ref{tab:chunks}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Domain} & \textbf{Chunks} \\
+\midrule
+ssa & 1697 \\
+va & 2845 \\
+dmv & 2826 \\
+studentaid & 1835 \\
+\bottomrule
+\end{tabular}
+\caption{Chunks processed per domain across the MultiDoc2Dial corpus for FAISS indexing.}
+\label{tab:chunks}
+\end{table}
+
+The top 15 candidate chunks are rescaled against a dedicated \textit{ms-marco} Cross-Encoder that evaluates query-content synergy, pruning low-relevance documents prior to context injection.
+
+\subsection{Explicit Citation Grounding}
+Generative system prompts strictly encode identifiers using the schema: \texttt{(doc\_id: <DOC> | chunk\_id: <CHUNK>)}. Utilizing LoRA weights, the T5 model evaluates the pruned Cross-Encoder contexts and generates grounded dialogue containing exact inline references \texttt{[1]}, successfully linking the final answer structurally back to the MultiDoc2Dial dataset.
+
+\section{Mathematical Formulations of Loss Objectives}
+We diverge from generic single-loss regimes, assigning independent objectives to specific modules.
+
+\subsection{Multiple Negatives Ranking Loss (Retriever)}
+Located within the retrieval structure, this contrastive loss assumes all other examples in a mini-batch act as "negatives" for a given positive query-document pair. Let $q_i$ be the query and $d_i$ the positive document:
+\begin{equation}
+\mathcal{L}_{MNR} = - \frac{1}{B} \sum_{i=1}^{B} \log \frac{e^{\text{sim}(q_i, d_i)}}{\sum_{j=1}^{B} e^{\text{sim}(q_i, d_j)}}
+\end{equation}
+where $\text{sim}(\cdot, \cdot)$ is the cosine similarity. This pulls related chunks together while pushing irrelevant vectors apart.
+
+\subsection{Triage Classification with Boundary Loss}
+Tool routing is upgraded to a 3-class system ($\{ANSWER, TICKET, REJECT\}$). We replace standard Cross-Entropy with a custom margin-based objective called \textbf{Triage Boundary Loss}. Let $p = \text{softmax}(f_\theta(q))$. This loss penalizes the model when the best wrong answer is too close to the correct answer:
+\begin{equation}
+\mathcal{L}_{boundary} = \text{softplus}(p_{wrong\_max} - p_{correct} + \mu)
+\end{equation}
+
+Additionally, we introduce a \textbf{KB Proximity Signal} $d_{KB}(q) = \min_{c \in KB} [1 - \cos(\phi(q), \phi(c))]$ to penalize the model when off-topic queries ($y = REJECT$) are confusingly similar to KB content:
+\begin{equation}
+\mathcal{L}_{KB} = \begin{cases} 
+\text{softplus}(\tau - d_{KB}(q)), & \text{if } y = REJECT \land d_{KB}(q) < \tau_0 \\ 
+0, & \text{otherwise} 
+\end{cases}
+\end{equation}
+
+\subsection{Pairwise Preference Margin Loss (Generator)}
+To inject a "helpful, concise, citation-first" rubric without Reinforcement Learning from Human Feedback (RLHF), we execute a custom stream of pairwise contrastive training. For identical user queries, the pipeline outputs loss gradients for a "Chosen" sequence $y_c$ (compact, properly cited) and a "Rejected" sample $y_r$ (hallucinated). The loss propagates strictly if $\mathcal{L}_{y_c}$ is not decisively smaller than $\mathcal{L}_{y_r}$ by a margin $m$:
+\begin{equation}
+\mathcal{L}_{Pairwise} = \max(0, \mathcal{L}_{y_c} - \mathcal{L}_{y_r} + m)
+\end{equation}
+We combine this with standard negative log-likelihood to ensure the model learns a bias against uncontrolled text generation while maintaining fluency.
+
+\section{Evaluation Metrics}
+
+Our automated testing suite evaluates the customized pipeline against a purely standard inference Retrieval-Augmented Generation (RAG) backend.
+
+\subsection{Novel Evaluation Metrics}
+To support enterprise workflows, we evaluate \textbf{Escalation Accuracy}, measuring the percentage of Out-Of-Domain (OOD) inputs that are safely identified and handed off to the \texttt{CreateTicket} Application Programming Interface (API), avoiding a hallucinated answer entirely.
+
+Furthermore, we formalize a confident evaluation criterion called \textbf{Triage Boundary Precision ($TBP_{\mu}$)}, which counts a prediction as correct only if it exceeds a margin threshold $\mu$:
+\begin{equation}
+TBP_{\mu} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}_{[\hat{y}_i = y_i \land (p^{(i)}_{correct} - p^{(i)}_{wrong\_max}) \ge \mu]}
+\end{equation}
+Unlike standard accuracy, this gates success on the model's triage margin confidence.
+\subsection{Quantitative Baselines}
+We utilize standard cosine vector measurements for remaining metrics:
+\begin{itemize}
+    \item \textbf{Average Grounding Score (MANDATORY):} The Cosine Semantic distance mapping the final Generated Text against the localized \texttt{chunk\_id} snippet texts to ensure evidence dependency.
+    \item \textbf{Average Relevance Score:} A vector score correlating the semantic meaning of the User Request against the Generator Response.
+    \item \textbf{Hallucination Count:} Discrete events where the model synthesizes answers natively for unsupported queries.
+\end{itemize}
+
+\section{Results \& Conclusion}
+Evaluation of the baseline (direct retrieval generation without policies) yielded elevated hallucination events on vague questions and poor Out-Of-Domain (OOD) containment. 
+
+\begin{table*}[t]
+\centering
+\begin{tabular}{l|c|c}
+\toprule
+\textbf{Metric} & \textbf{Baseline (Ret+Gen)} & \textbf{Improved Pipeline} \\
+\midrule
+Tool / Escalation Accuracy & 62.5\% & 100.0\% \\
+Avg Relevance Score (0-1) & 0.4141 & 0.5869 \\
+Avg Grounding Score (MANDATORY) & 0.4439 & 0.7659 \\
+Hallucination Count & 6 & 0 \\
+Average Latency & 1.71 sec & 5.62 sec \\
+\bottomrule
+\end{tabular}
+\caption{Optimized System Metrics Report comparing the baseline inference-only model against the fully deployed Improved Pipeline.}
+\label{tab:metrics}
+\end{table*}
+
+As detailed in Table \ref{tab:metrics}, our fully trained architecture successfully decouples a generative copilot into isolated, task-specific modules—optimized by Retrieval, Policy, and Alignment losses. The integration of structured JavaScript Object Notation (JSON) Tool Calling coupled with our novel Escalation Accuracy focus led to a 100\% reduction in OOD hallucinations on the test distribution, while the Pairwise Tuning demonstrably increased empirical Grounding metrics mapping directly to explicit document markers.
+
+\end{document}

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Desk | MultiDoc2Dial</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Outfit:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- TOP NAV BAR -->
+    <header class="nav-bar">
+        <div class="nav-brand">
+            <div class="logo-hex"></div>
+            <h1>MultiDoc2Dial Knowledge Desk</h1>
+        </div>
+        <div class="nav-domains">
+            <span class="domain-pill ssa">SSA</span>
+            <span class="domain-pill va">VA</span>
+            <span class="domain-pill studentaid">Student Aid</span>
+            <span class="domain-pill dmv">DMV</span>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD -->
+    <main class="dashboard">
+        
+        <!-- LEFT: CONVERSATION TIMELINE (60%) -->
+        <section class="timeline-panel">
+            <div id="timeline-container" class="timeline">
+                <div class="welcome-message">
+                    <p>Enter a query below to search the knowledge base.</p>
+                </div>
+                <!-- Message cards will be injected here via JS -->
+            </div>
+            
+            <!-- INPUT BAR (Docks at bottom of the timeline strictly) -->
+            <div class="input-bar-container">
+                <div class="quick-questions">
+                    <span class="quick-q">what are the social security credits?</span>
+                    <span class="quick-q">how do I apply for Medicare?</span>
+                    <span class="quick-q">What are the benefits of a federal student loan?</span>
+                </div>
+                <form id="chat-form" class="input-form">
+                    <textarea 
+                        id="query-input" 
+                        placeholder="Ask about SSA, VA, Student Aid, or DMV..." 
+                        rows="1"
+                        autofocus
+                    ></textarea>
+                    <button type="submit" id="send-button" disabled>
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- RIGHT: KNOWLEDGE PANEL (40%) -->
+        <section class="knowledge-panel">
+            <div class="knowledge-header">
+                <h2 id="knowledge-title">SOURCES</h2>
+                <span id="knowledge-count" class="count-badge">0 documents retrieved</span>
+            </div>
+            
+            <div id="sources-container" class="sources">
+                <div class="empty-state">
+                    <div class="empty-icon"></div>
+                    <p>Select a response to inspect its source documents</p>
+                </div>
+                <!-- Source cards will be injected here via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
