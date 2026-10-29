@@ -56,6 +56,7 @@ print(f"FAISS index built with {index.ntotal} vectors")
 faiss.write_index(index, os.path.join(DATA_DIR, "kb.index"))
 
 # 2. Persistently save Raw Numpy Embeddings to `.npy` (Requirement)
+np.save(os.path.join(DATA_DIR, "kb_embeddings.npy"), embeddings)
 np.save("kb_embeddings.npy", embeddings)
 print("[*] Embeddings successfully persistently cached to 'kb_embeddings.npy'")
 

@@ -1,3 +1,10 @@
+# MultiDoc2Dial Codebase
+
+> **Looking for the main project documentation, presentation flow, experimental setups, and benchmark results?**  
+> Please see the primary [Project README](../README.md).
+
+---
+
 ## MultiDoc2Dial Dataset - v1.0
 
 ### Reference

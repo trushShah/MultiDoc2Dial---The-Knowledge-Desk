@@ -314,7 +314,7 @@ def generate_answer(query):
     print(f"  [Agent Decision JSON]: {json.dumps(tool_command)}")
 
     # Track all queries
-    q_emb = embed_model.encode([query])[0]
+    q_emb = embed_model.encode([query], normalize_embeddings=True)[0]
     advise_maker = track_and_check_tickets(query, q_emb)
     
     if advise_maker:
@@ -367,7 +367,7 @@ def generate_answer(query):
                 "citations": [],
                 "ticket_id": esc_output["ticket_id"],
                 "advise_maker": advise_maker,
-                "probs": tool_command.get("probs", {}),
+                "probs": {"LABEL_0": 0.0, "LABEL_1": 1.0, "LABEL_2": 0.0},
                 "available_domains": [{"code": c, "label": l} for c, l in DOMAIN_LABELS.items()]
             }
         elif top_score < 0.0:
